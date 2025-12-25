@@ -1,0 +1,63 @@
+version: 1
+
+# Frontend build configuration
+frontend:
+  phases:
+    # Pre-build phase
+    preBuild:
+      commands:
+        - echo "Starting pre-build phase..."
+        - node --version
+        - npm --version
+        - echo "Installing dependencies..."
+        - npm ci
+        
+    # Build phase
+    build:
+      commands:
+        - echo "Starting build phase..."
+        - echo "Building SmartStore Product Management..."
+        - npm run build
+        - echo "Build completed successfully!"
+        
+  # Build artifacts
+  artifacts:
+    baseDirectory: build
+    files:
+      - '**/*'
+      
+  # Cache configuration for faster builds
+  cache:
+    paths:
+      - node_modules/**/*
+      - .npm/**/*
+
+# Environment variables (optional)
+# Add these in Amplify Console instead for security
+# You can reference them here if needed
+
+# Custom headers (optional)
+customHeaders:
+  - pattern: '**/*'
+    headers:
+      - key: 'Strict-Transport-Security'
+        value: 'max-age=31536000; includeSubDomains'
+      - key: 'X-Frame-Options'
+        value: 'SAMEORIGIN'
+      - key: 'X-Content-Type-Options'
+        value: 'nosniff'
+      - key: 'X-XSS-Protection'
+        value: '1; mode=block'
+      - key: 'Cache-Control'
+        value: 'public, max-age=31536000, immutable'
+  - pattern: '/index.html'
+    headers:
+      - key: 'Cache-Control'
+        value: 'no-cache, no-store, must-revalidate'
+
+# Redirects and rewrites for Single Page Application
+# This ensures all routes work correctly
+redirects:
+  - source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>'
+    target: '/index.html'
+    status: '200'
