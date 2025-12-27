@@ -6,8 +6,8 @@ frontend:
         - npm ci
     build:
       commands:
-        - npm run build
         - npm install -D @tailwindcss/postcss
+        - npm run build
   artifacts:
     baseDirectory: dist
     files:
