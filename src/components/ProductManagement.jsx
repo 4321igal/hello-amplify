@@ -1,53 +1,9 @@
-import React, { useState } from 'react';
-import { Search, Plus, Edit2, Trash2, Check, X, RefreshCw, Eye, Package, Tag, TrendingUp, AlertCircle, Upload, Image, Link2 } from 'lucide-react';
-
-const initialProducts = [
-  {
-    id: 1,
-    rawName: '× ×¢×œ×™ ×¡×¤×•×¨×˜ Nike Air Max',
-    rawDescription: '× ×¢×œ×™×™× × ×•×—×•×ª ×œ×¨×™×¦×"',
-    barcode: '1234567890123',
-    status: 'ready',
-    category: '× ×¢×œ×™×™×',
-    image: 'https://via.placeholder.com/300x300/667eea/ffffff?text=Nike+Shoes',
-    aiDescription: '× ×¢×œ×™ ×¡×¤×•×¨×˜ Nike Air Max ×"×ž×©×œ×'×•×ª',
-    aiTags: ['× ×¢×œ×™×™×', '×¡×¤×•×¨×˜', 'Nike'],
-    aiSEO: '× ×¢×œ×™ ×¡×¤×•×¨×˜ Nike Air Max',
-    confidence: 0.95,
-    targetAudience: '×¡×¤×•×¨×˜××™×, 18-45',
-    createdAt: '2024-01-15',
-    isOverridden: false
-  },
-  {
-    id: 2,
-    rawName: '×˜×œ×¤×•×Ÿ Samsung Galaxy',
-    rawDescription: '×˜×œ×¤×•×Ÿ ×—×š',
-    barcode: null,
-    status: 'pending',
-    category: '××œ×§×˜×¨×•× ×™×§×"',
-    image: 'https://via.placeholder.com/300x300/764ba2/ffffff?text=Samsung',
-    aiDescription: '',
-    aiTags: [],
-    aiSEO: '',
-    confidence: 0,
-    targetAudience: '',
-    createdAt: '2024-01-16',
-    isOverridden: false
-  }
-];
-
-const categories = ['× ×¢×œ×™×™×', '××œ×§×˜×¨×•× ×™×§×"', '×ª×™×§×™× ×•×ž×–×•×•×"×•×ª', '×¡×¤×•×¨×˜'];
+// This file is deprecated and should not be used
+// Use ProductManagementPage.tsx instead
 
 export default function ProductManagement() {
-  const [products, setProducts] = useState(initialProducts);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [aiRunning, setAiRunning] = useState(false);
-
-  const stats = {
-    total: products.length,
+  return null;
+}
     ready: products.filter(p => p.status === 'ready').length,
     pending: products.filter(p => p.status === 'pending').length,
     avgConfidence: (products.reduce((acc, p) => acc + p.confidence, 0) / products.length * 100).toFixed(0)

@@ -29,3 +29,12 @@ export interface CreateProductDTO {
   category: string;
   image?: string;
 }
+
+export interface CSVPreviewItem {
+  rawName?: string;
+  name?: string;
+  rawDescription?: string;
+  description?: string;
+  category?: string;
+  barcode?: string;
+}
