@@ -10,3 +10,12 @@ frontend:
         - npm install
         - npm install -g @aws-amplify/cli
     build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
