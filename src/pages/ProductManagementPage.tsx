@@ -1,137 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Search, Plus, Edit2, Trash2, Check, X, RefreshCw, Eye, Package, Tag, TrendingUp, AlertCircle, Upload, Image, Link2 } from 'lucide-react';
-
-// API Configuration
-const API_BASE_URL = 'http://localhost:3000'; // Update with your actual API URL
-
-const categories = [
-  'נעליים',
-  'אלקטרוניקה',
-  'תיקים ומזוודות',
-  'ביגוד',
-  'אביזרים',
-  'ספורט ופנאי',
-  'בית וגן',
-  'יופי וגריוות'
-];
-
-// API Service
-const apiService = {
-  async getProducts() {
-    const response = await fetch(`${API_BASE_URL}/api/products`);
-    if (!response.ok) throw new Error('Failed to fetch products');
-    return response.json();
-  },
-
-  async getProductById(id) {
-    const response = await fetch(`${API_BASE_URL}/api/products/${id}`);
-    if (!response.ok) throw new Error('Failed to fetch product');
-    return response.json();
-  },
-
-  async createProduct(dto) {
-    const response = await fetch(`${API_BASE_URL}/api/products`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dto)
-    });
-    if (!response.ok) throw new Error('Failed to create product');
-    return response.json();
-  },
-
-  async updateProduct(id, dto) {
-    const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dto)
-    });
-    if (!response.ok) throw new Error('Failed to update product');
-    return response.json();
-  },
-
-  async deleteProduct(id) {
-    const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
-      method: 'DELETE'
-    });
-    if (!response.ok) throw new Error('Failed to delete product');
-  },
-
-  async runAIAnalysis(id: string): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/api/products/${id}/analyze`, {
-      method: 'POST'
-    });
-    if (!response.ok) throw new Error(`Failed to run AI analysis: ${response.status} ${response.statusText}`);
-    return response.json();
-  },
-
-  async importProducts(file: File): Promise<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const response = await fetch(`${API_BASE_URL}/api/import-csv`, {
-      method: 'POST',
-      body: formData
-    });
-    if (!response.ok) throw new Error(`Failed to import products: ${response.status} ${response.statusText}`);
-    return response.json();
-  },
-
-  async getStats() {
-    const response = await fetch(`${API_BASE_URL}/api/products/stats/overview`);
-    if (!response.ok) throw new Error('Failed to fetch stats');
-    return response.json();
-  }
-};
+import { apiService } from '../services/api';
+import { PRODUCT_CATEGORIES } from '../constants/categories';
+import { Product, Stats } from '../types/product';
+import { useProducts, useProductForm, useCSVImport } from '../hooks';
 
 export default function ProductManagement() {
-  const [products, setProducts] = useState([]);
-  const [stats, setStats] = useState({ total: 0, ready: 0, pending: 0, avgConfidence: 0 });
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [aiRunning, setAiRunning] = useState(false);
-  const [viewMode, setViewMode] = useState('grid');
-  const [imageUploadType, setImageUploadType] = useState('upload');
-  const [imagePreview, setImagePreview] = useState(null);
-  const [imageUrl, setImageUrl] = useState('');
-  const [csvFile, setCsvFile] = useState(null);
-  const [importPreview, setImportPreview] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
-  // Form state
-  const [formData, setFormData] = useState({
-    rawName: '',
-    rawDescription: '',
-    barcode: '',
-    category: ''
-  });
-
-  // Load products and stats on mount and when filters change
-  useEffect(() => {
-    loadProducts();
-  }, [searchTerm, filterStatus]);
-
-  const loadProducts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await apiService.getProducts();
-      setProducts(data);
-      
-      // Load stats
-      const statsData = await apiService.getStats();
-      setStats(statsData);
-    } catch (err) {
-      setError(err.message);
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { products, stats, selectedProduct, searchTerm, filterStatus, loading, error, setSelectedProduct, setSearchTerm, setFilterStatus, loadProducts, addProduct, updateProduct, deleteProduct, runAIAnalysis, importProducts } = useProducts();
+  const { formData, imagePreview, imageUrl, imageUploadType, setFormData, setImagePreview, setImageUrl, setImageUploadType, handleImageUpload, resetForm, getSubmitData } = useProductForm();
+  const { csvFile, importPreview, setCsvFile, setImportPreview, handleCSVUpload, resetImport } = useCSVImport();
 
   const handleAddProduct = async () => {
     if (!formData.rawName.trim()) {
@@ -144,19 +26,13 @@ export default function ProductManagement() {
     }
 
     try {
-      const dto = {
-        ...formData,
-        image: imagePreview || imageUrl || null
-      };
-      await apiService.createProduct(dto);
+      const submitData = getSubmitData();
+      await addProduct(submitData);
       alert('מוצר נוסף בהצלחה!');
       setShowAddModal(false);
-      setFormData({ rawName: '', rawDescription: '', barcode: '', category: '' });
-      setImagePreview(null);
-      setImageUrl('');
-      loadProducts();
+      resetForm();
     } catch (err) {
-      alert('שגיאה: ' + err.message);
+      alert('שגיאה: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
@@ -164,72 +40,46 @@ export default function ProductManagement() {
     if (!selectedProduct) return;
 
     try {
-      await apiService.updateProduct(selectedProduct.id, selectedProduct);
+      await updateProduct(selectedProduct.id, selectedProduct);
       alert('מוצר עודכן בהצלחה!');
       setShowEditModal(false);
       setSelectedProduct(null);
-      loadProducts();
     } catch (err) {
-      alert('שגיאה: ' + err.message);
+      alert('שגיאה: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
-  const handleDeleteProduct = async (id) => {
+  const handleDeleteProduct = async (id: string) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק מוצר זה?')) return;
 
     try {
-      await apiService.deleteProduct(id);
+      await deleteProduct(id);
       alert('מוצר נמחק בהצלחה!');
-      loadProducts();
     } catch (err) {
-      alert('שגיאה: ' + err.message);
+      alert('שגיאה: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
-  const handleRunAI = async (productId) => {
+  const handleRunAI = async (productId: string) => {
     try {
-      setAiRunning(true);
-      const result = await apiService.runAIAnalysis(productId);
-      alert('ניתוח AI הסתיים בהצלחה!' + (result.message ? ` הודעה: ${result.message}` : ''));
-      loadProducts();
+      await runAIAnalysis(productId);
+      alert('ניתוח AI הסתיים בהצלחה!');
     } catch (err) {
-      alert('שגיאה: ' + err.message);
-    } finally {
-      setAiRunning(false);
+      alert('שגיאה: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
+  const handleImageUploadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
+      handleImageUpload(file);
     }
   };
 
-  const handleCSVUpload = (e) => {
-    const file = e.target.files[0];
+  const handleCSVUploadChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
-      setCsvFile(file);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target.result;
-        const lines = text.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim());
-        
-        const preview = lines.slice(1, 6).map((line, idx) => {
-          const values = line.split(',').map(v => v.trim());
-          const product = {};
-          headers.forEach((header, i) => {
-            product[header] = values[i] || '';
-          });
-          return { ...product, id: Date.now() + idx };
-        }).filter(p => p.rawName || p.name);
-        
-        setImportPreview(preview);
-      };
-      reader.readAsText(file);
+      handleCSVUpload(file);
     }
   };
 
@@ -240,14 +90,12 @@ export default function ProductManagement() {
         return;
       }
 
-      await apiService.importProducts(csvFile);
-      alert(`מוצרים יובאו בהצלחה!`);
+      const count = await importProducts(csvFile);
+      alert(`${count} מוצרים יובאו בהצלחה!`);
       setShowImportModal(false);
-      setCsvFile(null);
-      setImportPreview([]);
-      loadProducts();
+      resetImport();
     } catch (err) {
-      alert('שגיאה: ' + err.message);
+      alert('שגיאה: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
@@ -277,7 +125,7 @@ export default function ProductManagement() {
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  setFormData({ rawName: '', rawDescription: '', barcode: '', category: '' });
+                  resetForm();
                   setShowAddModal(true);
                 }}
                 className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all"
@@ -400,9 +248,9 @@ export default function ProductManagement() {
                 <div className="relative h-48 bg-gray-100 rounded-t-lg overflow-hidden">
                   <img 
                     src={product.image} 
-                    alt={product.setFilterStatus}
+                    alt={product.rawName}
                     className="w-full h-full object-cover"
-                    onError={(e) => e.target.src = 'https://via.placeholder.com/300x300/cccccc/ffffff?text=No+Image'}
+                    onError={(e) => (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x300/cccccc/ffffff?text=No+Image'}
                   />
                   {product.isOverridden && (
                     <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs">
@@ -447,10 +295,9 @@ export default function ProductManagement() {
                     {product.status === 'pending' ? (
                       <button
                         onClick={() => handleRunAI(product.id)}
-                        disabled={aiRunning}
-                        className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:shadow-lg transition-all disabled:opacity-50"
+                        className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:shadow-lg transition-all"
                       >
-                        <RefreshCw size={16} className={aiRunning ? 'animate-spin' : ''} />
+                        <RefreshCw size={16} />
                         הרץ AI
                       </button>
                     ) : (
@@ -510,7 +357,7 @@ export default function ProductManagement() {
                           src={product.image} 
                           alt={product.rawName}
                           className="w-12 h-12 rounded-lg object-cover"
-                          onError={(e) => e.target.src = 'https://via.placeholder.com/48x48/cccccc/ffffff?text=?'}
+                          onError={(e) => (e.target as HTMLImageElement).src = 'https://via.placeholder.com/48x48/cccccc/ffffff?text=?'}
                         />
                         <div>
                           <div className="font-medium text-gray-900">{product.rawName}</div>
@@ -546,10 +393,9 @@ export default function ProductManagement() {
                         {product.status === 'pending' && (
                           <button
                             onClick={() => handleRunAI(product.id)}
-                            disabled={aiRunning}
                             className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100"
                           >
-                            <RefreshCw size={16} className={aiRunning ? 'animate-spin' : ''} />
+                            <RefreshCw size={16} />
                           </button>
                         )}
                         <button
@@ -605,7 +451,7 @@ export default function ProductManagement() {
                           src={selectedProduct.image} 
                           alt={selectedProduct.rawName}
                           className="w-full h-full object-contain"
-                          onError={(e) => e.target.src = 'https://via.placeholder.com/300x300/cccccc/ffffff?text=No+Image'}
+                          onError={(e) => (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x300/cccccc/ffffff?text=No+Image'}
                         />
                       </div>
                     </div>
@@ -626,7 +472,7 @@ export default function ProductManagement() {
                         value={selectedProduct.rawDescription}
                         onChange={(e) => setSelectedProduct({...selectedProduct, rawDescription: e.target.value})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                        rows="3"
+                        rows={3}
                       />
                     </div>
 
@@ -636,7 +482,7 @@ export default function ProductManagement() {
                         value={selectedProduct.category}
                         onChange={(e) => setSelectedProduct({...selectedProduct, category: e.target.value})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                        {categories.map(cat => (
+                        {PRODUCT_CATEGORIES.map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
@@ -672,7 +518,7 @@ export default function ProductManagement() {
                             value={selectedProduct.aiDescription}
                             onChange={(e) => setSelectedProduct({...selectedProduct, aiDescription: e.target.value})}
                             className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                            rows="4"
+                            rows={4}
                           />
                         </div>
 
@@ -771,7 +617,7 @@ export default function ProductManagement() {
                       onChange={(e) => setFormData({...formData, rawDescription: e.target.value})}
                       placeholder="תיאור קצר של המוצר"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                      rows="3"
+                      rows={3}
                     />
                   </div>
 
@@ -782,7 +628,7 @@ export default function ProductManagement() {
                       onChange={(e) => setFormData({...formData, category: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                       <option value="">בחר קטגוריה</option>
-                      {categories.map(cat => (
+                      {PRODUCT_CATEGORIES.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
                       ))}
                     </select>
@@ -822,7 +668,7 @@ export default function ProductManagement() {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={handleImageUpload}
+                          onChange={handleImageUploadChange}
                           className="hidden"
                           id="imageUpload"
                         />
@@ -878,8 +724,7 @@ export default function ProductManagement() {
                   <button
                     onClick={() => {
                       setShowAddModal(false);
-                      setImagePreview(null);
-                      setImageUrl('');
+                      resetForm();
                     }}
                     className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
@@ -900,8 +745,7 @@ export default function ProductManagement() {
                 <button
                   onClick={() => {
                     setShowImportModal(false);
-                    setCsvFile(null);
-                    setImportPreview([]);
+                    resetImport();
                   }}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
@@ -925,7 +769,7 @@ export default function ProductManagement() {
                     <input
                       type="file"
                       accept=".csv"
-                      onChange={handleCSVUpload}
+                      onChange={handleCSVUploadChange}
                       className="hidden"
                       id="csvUpload"
                     />
