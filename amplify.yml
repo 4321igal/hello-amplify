@@ -1,13 +1,9 @@
-version: 1
-env:
-  variables:
-    NODE_ENV: production
-
 frontend:
   phases:
     preBuild:
       commands:
         - npm install
+        - npm install -g vite
     build:
       commands:
         - npm run build
