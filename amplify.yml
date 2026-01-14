@@ -9,13 +9,4 @@ frontend:
       commands:
         - npm ci
         - npm install -g @aws-amplify/cli
-      commands:
-        - npm install -D @tailwindcss/postcss
-        - npm run build
-  artifacts:
-    baseDirectory: dist
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - node_modules/**/*
+    build:
