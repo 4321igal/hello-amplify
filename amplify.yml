@@ -1,10 +1,14 @@
 version: 1
+env:
+  variables:
+    NODE_ENV: production
+
 frontend:
   phases:
     preBuild:
       commands:
         - npm ci
-    build:
+        - npm install -g @aws-amplify/cli
       commands:
         - npm install -D @tailwindcss/postcss
         - npm run build

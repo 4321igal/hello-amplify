@@ -1,13 +1,19 @@
 import { defineStorage } from '@aws-amplify/backend';
 
 export const storage = defineStorage({
-  name: 'appStorage',
+  name: 'productImages',
   access: (allow) => ({
-    'public/*': [
+    // Public images (readable by everyone)
+    'public/images/*': [
       allow.guest.to(['read']),
       allow.authenticated.to(['read', 'write', 'delete']),
     ],
-    'private/${identityId}/*': [
+    // CSV imports (private)
+    'private/${identityId}/imports/*': [
+      allow.authenticated.to(['read', 'write', 'delete']),
+    ],
+    // Temp uploads during processing
+    'private/${identityId}/uploads/*': [
       allow.authenticated.to(['read', 'write', 'delete']),
     ],
   }),

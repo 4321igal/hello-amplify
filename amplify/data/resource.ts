@@ -1,17 +1,37 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { runAIAnalysis } from '../functions/runAIAnalysis/resource';
+import { importCSV } from '../functions/importCSV/resource';
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any unauthenticated user can "create", "read", "update", 
-and "delete" any "Todo" records.
-=========================================================================*/
 const schema = a.schema({
-  Todo: a
+  Product: a
     .model({
-      content: a.string(),
+      rawName: a.string().required(),
+      rawDescription: a.string().required(),
+      category: a.string().required(),
+      barcode: a.string(),
+      image: a.string().required(),
+      isOverridden: a.boolean(),
+      status: a.enum(['PENDING', 'READY']).required(),
+      confidence: a.float().required(),
+      aiDescription: a.string(),
+      aiTags: a.string().array(),
+      aiSEO: a.string(),
+      targetAudience: a.string(),
+      ownerId: a.string().required(),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [
+      allow.owner(),
+      allow.public().to(['read']),
+    ]),
+
+  Stats: a
+    .model({
+      total: a.integer().required(),
+      ready: a.integer().required(),
+      pending: a.integer().required(),
+      avgConfidence: a.integer().required(),
+    })
+    .authorization((allow) => [allow.public().to(['read'])]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
