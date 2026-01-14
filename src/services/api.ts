@@ -3,147 +3,32 @@ import { Product, Stats, CreateProductDTO } from '../types/product';
 
 const client = generateClient();
 
-// GraphQL Queries
-const getProductsQuery = `
-  query ListProducts {
-    listProducts {
-      items {
-        id
-        rawName
-        rawDescription
-        category
-        barcode
-        image
-        status
-        confidence
-        aiDescription
-        aiTags
-        aiSEO
-        targetAudience
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-const getProductByIdQuery = `
-  query GetProduct($id: ID!) {
-    getProduct(id: $id) {
-      id
-      rawName
-      rawDescription
-      category
-      barcode
-      image
-      isOverridden
-      status
-      confidence
-      aiDescription
-      aiTags
-      aiSEO
-      targetAudience
-      createdAt
-      updatedAt
-    }
-  }
-`;
-
-const createProductMutation = `
-  mutation CreateProduct(
-    $rawName: String!
-    $rawDescription: String!
-    $category: String!
-    $barcode: String
-    $image: String!
-    $status: ProductStatus!
-    $confidence: Float!
-    $ownerId: String!
-  ) {
-    createProduct(input: {
-      rawName: $rawName
-      rawDescription: $rawDescription
-      category: $category
-      barcode: $barcode
-      image: $image
-      status: $status
-      confidence: $confidence
-      ownerId: $ownerId
-    }) {
-      id
-      rawName
-      rawDescription
-      category
-      image
-      status
-      confidence
-    }
-  }
-`;
-
-const updateProductMutation = `
-  mutation UpdateProduct(
-    $id: ID!
-    $rawName: String
-    $rawDescription: String
-    $category: String
-    $image: String
-    $status: ProductStatus
-    $confidence: Float
-    $aiDescription: String
-    $aiTags: [String!]
-    $aiSEO: String
-    $targetAudience: String
-  ) {
-    updateProduct(input: {
-      id: $id
-      rawName: $rawName
-      rawDescription: $rawDescription
-      category: $category
-      image: $image
-      status: $status
-      confidence: $confidence
-      aiDescription: $aiDescription
-      aiTags: $aiTags
-      aiSEO: $aiSEO
-      targetAudience: $targetAudience
-    }) {
-      id
-      rawName
-      status
-      confidence
-      aiDescription
-      aiTags
-    }
-  }
-`;
-
-const deleteProductMutation = `
-  mutation DeleteProduct($id: ID!) {
-    deleteProduct(input: { id: $id }) {
-      id
-    }
-  }
-`;
-
-const getStatsQuery = `
-  query GetStats {
-    getProductStats {
-      total
-      ready
-      pending
-      avgConfidence
-    }
-  }
-`;
-
 export const apiService = {
   async getProducts(): Promise<Product[]> {
     try {
       const response = await client.graphql({
-        query: getProductsQuery
+        query: `
+          query ListAllProducts {
+            listAllProducts {
+              id
+              rawName
+              rawDescription
+              category
+              barcode
+              image
+              status
+              confidence
+              aiDescription
+              aiTags
+              aiSEO
+              targetAudience
+              createdAt
+              updatedAt
+            }
+          }
+        `,
       });
-      return (response.data as any).listProducts?.items || [];
+      return (response.data as any).listAllProducts || [];
     } catch (error) {
       console.error('Failed to fetch products:', error);
       throw new Error('Failed to fetch products');
@@ -153,8 +38,28 @@ export const apiService = {
   async getProductById(id: string): Promise<Product> {
     try {
       const response = await client.graphql({
-        query: getProductByIdQuery,
-        variables: { id }
+        query: `
+          query GetProduct($id: ID!) {
+            getProduct(id: $id) {
+              id
+              rawName
+              rawDescription
+              category
+              barcode
+              image
+              isOverridden
+              status
+              confidence
+              aiDescription
+              aiTags
+              aiSEO
+              targetAudience
+              createdAt
+              updatedAt
+            }
+          }
+        `,
+        variables: { id },
       });
       return (response.data as any).getProduct;
     } catch (error) {
@@ -166,11 +71,32 @@ export const apiService = {
   async createProduct(dto: CreateProductDTO): Promise<Product> {
     try {
       const response = await client.graphql({
-        query: createProductMutation,
-        variables: {
-          ...dto,
-          ownerId: 'user-id'
-        }
+        query: `
+          mutation CreateProduct(
+            $rawName: String!
+            $rawDescription: String!
+            $category: String!
+            $barcode: String
+            $image: String!
+          ) {
+            createProduct(
+              rawName: $rawName
+              rawDescription: $rawDescription
+              category: $category
+              barcode: $barcode
+              image: $image
+            ) {
+              id
+              rawName
+              rawDescription
+              category
+              image
+              status
+              confidence
+            }
+          }
+        `,
+        variables: dto,
       });
       return (response.data as any).createProduct;
     } catch (error) {
@@ -182,8 +108,43 @@ export const apiService = {
   async updateProduct(id: string, dto: Partial<Product>): Promise<Product> {
     try {
       const response = await client.graphql({
-        query: updateProductMutation,
-        variables: { id, ...dto }
+        query: `
+          mutation UpdateProduct(
+            $id: ID!
+            $rawName: String
+            $rawDescription: String
+            $category: String
+            $image: String
+            $status: ProductStatus
+            $confidence: Float
+            $aiDescription: String
+            $aiTags: [String!]
+            $aiSEO: String
+            $targetAudience: String
+          ) {
+            updateProduct(
+              id: $id
+              rawName: $rawName
+              rawDescription: $rawDescription
+              category: $category
+              image: $image
+              status: $status
+              confidence: $confidence
+              aiDescription: $aiDescription
+              aiTags: $aiTags
+              aiSEO: $aiSEO
+              targetAudience: $targetAudience
+            ) {
+              id
+              rawName
+              status
+              confidence
+              aiDescription
+              aiTags
+            }
+          }
+        `,
+        variables: { id, ...dto },
       });
       return (response.data as any).updateProduct;
     } catch (error) {
@@ -195,8 +156,12 @@ export const apiService = {
   async deleteProduct(id: string): Promise<void> {
     try {
       await client.graphql({
-        query: deleteProductMutation,
-        variables: { id }
+        query: `
+          mutation DeleteProduct($id: ID!) {
+            deleteProduct(id: $id)
+          }
+        `,
+        variables: { id },
       });
     } catch (error) {
       console.error('Failed to delete product:', error);
@@ -208,7 +173,7 @@ export const apiService = {
     try {
       const response = await client.graphql({
         query: `
-          mutation RunAI($productId: ID!) {
+          mutation RunAIAnalysis($productId: ID!) {
             runAIAnalysis(productId: $productId) {
               id
               status
@@ -220,7 +185,7 @@ export const apiService = {
             }
           }
         `,
-        variables: { productId: id }
+        variables: { productId: id },
       });
       return (response.data as any).runAIAnalysis;
     } catch (error) {
@@ -231,26 +196,32 @@ export const apiService = {
 
   async importProducts(file: File): Promise<{ count: number; products: Product[] }> {
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const csvContent = await file.text();
 
       const response = await client.graphql({
         query: `
-          mutation ImportCSV($file: String!) {
-            importProductsFromCSV(file: $file) {
+          mutation ImportCSV($csvContent: String!) {
+            importProductsFromCSV(csvContent: $csvContent) {
               count
               success
               message
+              products {
+                id
+                rawName
+                rawDescription
+                category
+                image
+              }
             }
           }
         `,
-        variables: { file: file.name }
+        variables: { csvContent },
       });
 
       const result = (response.data as any).importProductsFromCSV;
       return {
         count: result.count,
-        products: []
+        products: result.products || [],
       };
     } catch (error) {
       console.error('Failed to import products:', error);
@@ -261,12 +232,21 @@ export const apiService = {
   async getStats(): Promise<Stats> {
     try {
       const response = await client.graphql({
-        query: getStatsQuery
+        query: `
+          query GetStats {
+            getProductStats {
+              total
+              ready
+              pending
+              avgConfidence
+            }
+          }
+        `,
       });
       return (response.data as any).getProductStats;
     } catch (error) {
       console.error('Failed to fetch stats:', error);
       throw new Error('Failed to fetch stats');
     }
-  }
+  },
 };

@@ -37,23 +37,54 @@ type Stats @model @auth(rules: [{ allow: public }]) {
 }
 
 type Query {
-  getProductStats: Stats
-    @function(name: "getProductStats-${env}")
-    @auth(rules: [{ allow: public }])
+  # Get all products
+  listAllProducts: [Product!]! @function(name: "listProducts-${env}")
+  
+  # Get stats
+  getProductStats: Stats @function(name: "getStats-${env}")
+  
+  # Get single product
+  getProduct(id: ID!): Product @function(name: "getProduct-${env}")
 }
 
 type Mutation {
-  importProductsFromCSV(file: String!): ImportResult
-    @function(name: "importCSV-${env}")
-    @auth(rules: [{ allow: public }])
+  # Create product
+  createProduct(
+    rawName: String!
+    rawDescription: String!
+    category: String!
+    barcode: String
+    image: String!
+  ): Product @function(name: "createProduct-${env}")
   
-  runAIAnalysis(productId: ID!): Product
-    @function(name: "runAIAnalysis-${env}")
-    @auth(rules: [{ allow: public }])
+  # Update product
+  updateProduct(
+    id: ID!
+    rawName: String
+    rawDescription: String
+    category: String
+    image: String
+    status: ProductStatus
+    confidence: Float
+    aiDescription: String
+    aiTags: [String!]
+    aiSEO: String
+    targetAudience: String
+  ): Product @function(name: "updateProduct-${env}")
+  
+  # Delete product
+  deleteProduct(id: ID!): Boolean @function(name: "deleteProduct-${env}")
+  
+  # Run AI analysis
+  runAIAnalysis(productId: ID!): Product @function(name: "runAIAnalysis-${env}")
+  
+  # Import CSV
+  importProductsFromCSV(csvContent: String!): ImportResult @function(name: "importCSV-${env}")
 }
 
 type ImportResult {
   count: Int!
   success: Boolean!
   message: String!
+  products: [Product!]
 }
