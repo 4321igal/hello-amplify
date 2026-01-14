@@ -1,57 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Check, X, RefreshCw, Eye, Package, Tag, TrendingUp, AlertCircle, Upload, Image, Link2 } from 'lucide-react';
 
-// Mock data
-const initialProducts = [
-  {
-    id: 1,
-    rawName: 'נעלי ספורט Nike Air Max',
-    rawDescription: 'נעליים נוחות לריצה',
-    barcode: '1234567890123',
-    status: 'ready',
-    category: 'נעליים',
-    image: 'https://via.placeholder.com/300x300/667eea/ffffff?text=Nike+Shoes',
-    aiDescription: 'נעלי ספורט Nike Air Max המשלבות נוחות מקסימלית עם עיצוב מודרני. מושלמות לריצה, אימונים ולבוש יומיומי. טכנולוגיית Air המפורסמת מספקת ספיגת זעזועים מעולה.',
-    aiTags: ['נעליים', 'ספורט', 'Nike', 'ריצה', 'אימונים'],
-    aiSEO: 'נעלי ספורט Nike Air Max | נוחות מקסימלית לריצה ואימונים',
-    confidence: 0.95,
-    targetAudience: 'ספורטאים, מתאמנים בני 18-45',
-    createdAt: '2024-01-15',
-    isOverridden: false
-  },
-  {
-    id: 2,
-    rawName: 'טלפון Samsung Galaxy',
-    rawDescription: 'טלפון חכם',
-    barcode: null,
-    status: 'pending',
-    category: 'אלקטרוניקה',
-    image: 'https://via.placeholder.com/300x300/764ba2/ffffff?text=Samsung',
-    aiDescription: '',
-    aiTags: [],
-    aiSEO: '',
-    confidence: 0,
-    targetAudience: '',
-    createdAt: '2024-01-16',
-    isOverridden: false
-  },
-  {
-    id: 3,
-    rawName: 'תיק גב מקצועי',
-    rawDescription: 'תיק למחשב נייד',
-    barcode: '9876543210987',
-    status: 'ready',
-    category: 'תיקים ומזוודות',
-    image: 'https://via.placeholder.com/300x300/43e97b/ffffff?text=Backpack',
-    aiDescription: 'תיק גב מקצועי ואיכותי המיועד למחשבים ניידים עד 15.6 אינץ. כולל תאים מרופדים, כיסים מרובים לארגון מושלם ורצועות נוחות. עמיד במים ובנוי לשנים.',
-    aiTags: ['תיק', 'מחשב נייד', 'עבודה', 'לימודים', 'תיק גב'],
-    aiSEO: 'תיק גב למחשב נייד | עמיד במים ונוח לעבודה ולימודים',
-    confidence: 0.88,
-    targetAudience: 'סטודנטים, עובדי היי-טק בני 20-40',
-    createdAt: '2024-01-14',
-    isOverridden: true
-  }
-];
+// API Configuration
+const API_BASE_URL = 'http://localhost:3000'; // Update with your actual API URL
 
 const categories = [
   'נעליים',
@@ -61,11 +12,80 @@ const categories = [
   'אביזרים',
   'ספורט ופנאי',
   'בית וגן',
-  'יופי ובריאות'
+  'יופי וגריוות'
 ];
 
+// API Service
+const apiService = {
+  async getProducts() {
+    const response = await fetch(`${API_BASE_URL}/api/products`);
+    if (!response.ok) throw new Error('Failed to fetch products');
+    return response.json();
+  },
+
+  async getProductById(id) {
+    const response = await fetch(`${API_BASE_URL}/api/products/${id}`);
+    if (!response.ok) throw new Error('Failed to fetch product');
+    return response.json();
+  },
+
+  async createProduct(dto) {
+    const response = await fetch(`${API_BASE_URL}/api/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto)
+    });
+    if (!response.ok) throw new Error('Failed to create product');
+    return response.json();
+  },
+
+  async updateProduct(id, dto) {
+    const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto)
+    });
+    if (!response.ok) throw new Error('Failed to update product');
+    return response.json();
+  },
+
+  async deleteProduct(id) {
+    const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete product');
+  },
+
+  async runAIAnalysis(id: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/api/products/${id}/analyze`, {
+      method: 'POST'
+    });
+    if (!response.ok) throw new Error(`Failed to run AI analysis: ${response.status} ${response.statusText}`);
+    return response.json();
+  },
+
+  async importProducts(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(`${API_BASE_URL}/api/import-csv`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Failed to import products: ${response.status} ${response.statusText}`);
+    return response.json();
+  },
+
+  async getStats() {
+    const response = await fetch(`${API_BASE_URL}/api/products/stats/overview`);
+    if (!response.ok) throw new Error('Failed to fetch stats');
+    return response.json();
+  }
+};
+
 export default function ProductManagement() {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState([]);
+  const [stats, setStats] = useState({ total: 0, ready: 0, pending: 0, avgConfidence: 0 });
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -74,71 +94,120 @@ export default function ProductManagement() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
-  const [imageUploadType, setImageUploadType] = useState('upload'); // upload or url
+  const [imageUploadType, setImageUploadType] = useState('upload');
   const [imagePreview, setImagePreview] = useState(null);
   const [imageUrl, setImageUrl] = useState('');
   const [csvFile, setCsvFile] = useState(null);
   const [importPreview, setImportPreview] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Stats
-  const stats = {
-    total: products.length,
-    ready: products.filter(p => p.status === 'ready').length,
-    pending: products.filter(p => p.status === 'pending').length,
-    avgConfidence: (products.reduce((acc, p) => acc + p.confidence, 0) / products.length * 100).toFixed(0)
-  };
-
-  // Filter products
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.rawName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
-    return matchesSearch && matchesStatus;
+  // Form state
+  const [formData, setFormData] = useState({
+    rawName: '',
+    rawDescription: '',
+    barcode: '',
+    category: ''
   });
 
-  // Run AI Analysis
-  const runAI = async (productId) => {
-    setAiRunning(true);
-    // Simulate AI processing
-    setTimeout(() => {
-      setProducts(products.map(p => {
-        if (p.id === productId) {
-          return {
-            ...p,
-            status: 'ready',
-            aiDescription: `תיאור שיווקי מקצועי שנוצר ע"י AI עבור ${p.rawName}. המוצר מציע ערך מעולה ואיכות גבוהה. מושלם עבור לקוחות המחפשים פתרון איכותי ואמין.`,
-            aiTags: ['איכות', 'מומלץ', p.category, 'חדש'],
-            aiSEO: `${p.rawName} | קנה עכשיו במחיר מבצע`,
-            confidence: 0.85 + Math.random() * 0.15,
-            targetAudience: 'קהל רחב בני 18-65'
-          };
-        }
-        return p;
-      }));
-      setAiRunning(false);
-    }, 2000);
-  };
+  // Load products and stats on mount and when filters change
+  useEffect(() => {
+    loadProducts();
+  }, [searchTerm, filterStatus]);
 
-  // Delete product
-  const deleteProduct = (id) => {
-    if (confirm('האם אתה בטוח שברצונך למחוק מוצר זה?')) {
-      setProducts(products.filter(p => p.id !== id));
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiService.getProducts();
+      setProducts(data);
+      
+      // Load stats
+      const statsData = await apiService.getStats();
+      setStats(statsData);
+    } catch (err) {
+      setError(err.message);
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Handle image upload
+  const handleAddProduct = async () => {
+    if (!formData.rawName.trim()) {
+      alert('שם המוצר חובה');
+      return;
+    }
+    if (!formData.category) {
+      alert('בחר קטגוריה');
+      return;
+    }
+
+    try {
+      const dto = {
+        ...formData,
+        image: imagePreview || imageUrl || null
+      };
+      await apiService.createProduct(dto);
+      alert('מוצר נוסף בהצלחה!');
+      setShowAddModal(false);
+      setFormData({ rawName: '', rawDescription: '', barcode: '', category: '' });
+      setImagePreview(null);
+      setImageUrl('');
+      loadProducts();
+    } catch (err) {
+      alert('שגיאה: ' + err.message);
+    }
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      await apiService.updateProduct(selectedProduct.id, selectedProduct);
+      alert('מוצר עודכן בהצלחה!');
+      setShowEditModal(false);
+      setSelectedProduct(null);
+      loadProducts();
+    } catch (err) {
+      alert('שגיאה: ' + err.message);
+    }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!confirm('האם אתה בטוח שברצונך למחוק מוצר זה?')) return;
+
+    try {
+      await apiService.deleteProduct(id);
+      alert('מוצר נמחק בהצלחה!');
+      loadProducts();
+    } catch (err) {
+      alert('שגיאה: ' + err.message);
+    }
+  };
+
+  const handleRunAI = async (productId) => {
+    try {
+      setAiRunning(true);
+      const result = await apiService.runAIAnalysis(productId);
+      alert('ניתוח AI הסתיים בהצלחה!' + (result.message ? ` הודעה: ${result.message}` : ''));
+      loadProducts();
+    } catch (err) {
+      alert('שגיאה: ' + err.message);
+    } finally {
+      setAiRunning(false);
+    }
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
+      reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
     }
   };
 
-  // Handle CSV upload
   const handleCSVUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -164,31 +233,36 @@ export default function ProductManagement() {
     }
   };
 
-  // Import CSV products
-  const importCSVProducts = () => {
-    const newProducts = importPreview.map(p => ({
-      id: Date.now() + Math.random(),
-      rawName: p.rawName || p.name || p.productName,
-      rawDescription: p.rawDescription || p.description || '',
-      barcode: p.barcode || null,
-      category: p.category || 'כללי',
-      image: p.image || p.imageUrl || 'https://via.placeholder.com/300x300/cccccc/ffffff?text=No+Image',
-      status: 'pending',
-      aiDescription: '',
-      aiTags: [],
-      aiSEO: '',
-      confidence: 0,
-      targetAudience: '',
-      createdAt: new Date().toISOString().split('T')[0],
-      isOverridden: false
-    }));
-    
-    setProducts([...products, ...newProducts]);
-    setShowImportModal(false);
-    setCsvFile(null);
-    setImportPreview([]);
-    alert(`${newProducts.length} מוצרים יובאו בהצלחה!`);
+  const handleImportCSV = async () => {
+    try {
+      if (!csvFile) {
+        alert('בחר קובץ CSV');
+        return;
+      }
+
+      await apiService.importProducts(csvFile);
+      alert(`מוצרים יובאו בהצלחה!`);
+      setShowImportModal(false);
+      setCsvFile(null);
+      setImportPreview([]);
+      loadProducts();
+    } catch (err) {
+      alert('שגיאה: ' + err.message);
+    }
   };
+
+  const filteredProducts = products;
+
+  if (loading && products.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center" dir="rtl">
+        <div className="text-center">
+          <RefreshCw className="animate-spin mx-auto text-purple-600 mb-4" size={48} />
+          <p className="text-gray-600">טוען מוצרים...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
@@ -202,7 +276,10 @@ export default function ProductManagement() {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowAddModal(true)}
+                onClick={() => {
+                  setFormData({ rawName: '', rawDescription: '', barcode: '', category: '' });
+                  setShowAddModal(true);
+                }}
                 className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all"
               >
                 <Plus size={20} />
@@ -221,13 +298,23 @@ export default function ProductManagement() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex gap-3">
+            <AlertCircle className="text-red-600 flex-shrink-0" size={20} />
+            <div>
+              <p className="font-medium text-red-900">שגיאה בטעינת נתונים</p>
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">סך הכל מוצרים</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total || 0}</p>
               </div>
               <Package className="text-purple-600" size={32} />
             </div>
@@ -237,7 +324,7 @@ export default function ProductManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">מוכנים לפרסום</p>
-                <p className="text-2xl font-bold text-green-600">{stats.ready}</p>
+                <p className="text-2xl font-bold text-green-600">{stats.ready || 0}</p>
               </div>
               <Check className="text-green-600" size={32} />
             </div>
@@ -247,7 +334,7 @@ export default function ProductManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">ממתינים לניתוח</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.pending || 0}</p>
               </div>
               <AlertCircle className="text-yellow-600" size={32} />
             </div>
@@ -257,7 +344,7 @@ export default function ProductManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">ביטחון ממוצע</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.avgConfidence}%</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.avgConfidence || 0}%</p>
               </div>
               <TrendingUp className="text-blue-600" size={32} />
             </div>
@@ -310,15 +397,12 @@ export default function ProductManagement() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.map(product => (
               <div key={product.id} className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow">
-                {/* Product Image */}
                 <div className="relative h-48 bg-gray-100 rounded-t-lg overflow-hidden">
                   <img 
                     src={product.image} 
-                    alt={product.rawName}
+                    alt={product.setFilterStatus}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/300x300/cccccc/ffffff?text=No+Image';
-                    }}
+                    onError={(e) => e.target.src = 'https://via.placeholder.com/300x300/cccccc/ffffff?text=No+Image'}
                   />
                   {product.isOverridden && (
                     <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs">
@@ -344,10 +428,6 @@ export default function ProductManagement() {
                     </div>
                   </div>
 
-                  {product.barcode && (
-                    <p className="text-xs text-gray-500 mb-2">ברקוד: {product.barcode}</p>
-                  )}
-
                   {product.confidence > 0 && (
                     <div className="mb-3">
                       <div className="flex items-center justify-between text-xs mb-1">
@@ -366,7 +446,7 @@ export default function ProductManagement() {
                   <div className="flex gap-2 mt-4">
                     {product.status === 'pending' ? (
                       <button
-                        onClick={() => runAI(product.id)}
+                        onClick={() => handleRunAI(product.id)}
                         disabled={aiRunning}
                         className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-3 py-2 rounded-lg text-sm hover:shadow-lg transition-all disabled:opacity-50"
                       >
@@ -397,7 +477,7 @@ export default function ProductManagement() {
                     </button>
                     
                     <button
-                      onClick={() => deleteProduct(product.id)}
+                      onClick={() => handleDeleteProduct(product.id)}
                       className="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
                     >
                       <Trash2 size={16} />
@@ -430,15 +510,10 @@ export default function ProductManagement() {
                           src={product.image} 
                           alt={product.rawName}
                           className="w-12 h-12 rounded-lg object-cover"
-                          onError={(e) => {
-                            e.target.src = 'https://via.placeholder.com/48x48/cccccc/ffffff?text=?';
-                          }}
+                          onError={(e) => e.target.src = 'https://via.placeholder.com/48x48/cccccc/ffffff?text=?'}
                         />
                         <div>
                           <div className="font-medium text-gray-900">{product.rawName}</div>
-                          {product.barcode && (
-                            <div className="text-xs text-gray-500">{product.barcode}</div>
-                          )}
                         </div>
                       </div>
                     </td>
@@ -464,13 +539,13 @@ export default function ProductManagement() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      {product.createdAt}
+                      {new Date(product.createdAt).toLocaleDateString('he-IL')}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
                         {product.status === 'pending' && (
                           <button
-                            onClick={() => runAI(product.id)}
+                            onClick={() => handleRunAI(product.id)}
                             disabled={aiRunning}
                             className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100"
                           >
@@ -487,7 +562,7 @@ export default function ProductManagement() {
                           <Edit2 size={16} />
                         </button>
                         <button
-                          onClick={() => deleteProduct(product.id)}
+                          onClick={() => handleDeleteProduct(product.id)}
                           className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
                         >
                           <Trash2 size={16} />
@@ -520,11 +595,9 @@ export default function ProductManagement() {
 
               <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Raw Data */}
                   <div className="space-y-4">
-                    <h3 className="font-bold text-lg border-b pb-2">נתונים גולמיים</h3>
+                    <h3 className="font-bold text-lg border-b pb-2">נתונים בולמיים</h3>
                     
-                    {/* Image Display */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">תמונת מוצר</label>
                       <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
@@ -532,15 +605,9 @@ export default function ProductManagement() {
                           src={selectedProduct.image} 
                           alt={selectedProduct.rawName}
                           className="w-full h-full object-contain"
-                          onError={(e) => {
-                            e.target.src = 'https://via.placeholder.com/300x300/cccccc/ffffff?text=No+Image';
-                          }}
+                          onError={(e) => e.target.src = 'https://via.placeholder.com/300x300/cccccc/ffffff?text=No+Image'}
                         />
                       </div>
-                      <button className="mt-2 text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1">
-                        <Image size={16} />
-                        שנה תמונה
-                      </button>
                     </div>
                     
                     <div>
@@ -548,44 +615,34 @@ export default function ProductManagement() {
                       <input
                         type="text"
                         value={selectedProduct.rawName}
+                        onChange={(e) => setSelectedProduct({...selectedProduct, rawName: e.target.value})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                        readOnly
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">תיאור גולמי</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">תיאור בולמי</label>
                       <textarea
                         value={selectedProduct.rawDescription}
+                        onChange={(e) => setSelectedProduct({...selectedProduct, rawDescription: e.target.value})}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         rows="3"
-                        readOnly
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">ברקוד</label>
-                      <input
-                        type="text"
-                        value={selectedProduct.barcode || 'לא קיים'}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                        readOnly
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">קטגוריה</label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                      <select 
+                        value={selectedProduct.category}
+                        onChange={(e) => setSelectedProduct({...selectedProduct, category: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg">
                         {categories.map(cat => (
-                          <option key={cat} selected={cat === selectedProduct.category}>
-                            {cat}
-                          </option>
+                          <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
                     </div>
                   </div>
 
-                  {/* AI Data */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between border-b pb-2">
                       <h3 className="font-bold text-lg">תוצרי AI</h3>
@@ -601,7 +658,7 @@ export default function ProductManagement() {
                         <AlertCircle className="mx-auto text-yellow-500 mb-3" size={48} />
                         <p className="text-gray-600 mb-4">המוצר טרם נותח</p>
                         <button
-                          onClick={() => runAI(selectedProduct.id)}
+                          onClick={() => handleRunAI(selectedProduct.id)}
                           className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-2 rounded-lg"
                         >
                           הרץ ניתוח AI
@@ -613,16 +670,16 @@ export default function ProductManagement() {
                           <label className="block text-sm font-medium text-gray-700 mb-1">תיאור שיווקי</label>
                           <textarea
                             value={selectedProduct.aiDescription}
+                            onChange={(e) => setSelectedProduct({...selectedProduct, aiDescription: e.target.value})}
                             className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                             rows="4"
                           />
-                          <p className="text-xs text-gray-500 mt-1">ניתן לערוך ידנית</p>
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">תגיות</label>
                           <div className="flex flex-wrap gap-2">
-                            {selectedProduct.aiTags.map((tag, idx) => (
+                            {selectedProduct.aiTags?.map((tag, idx) => (
                               <span key={idx} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
                                 {tag}
                               </span>
@@ -635,6 +692,7 @@ export default function ProductManagement() {
                           <input
                             type="text"
                             value={selectedProduct.aiSEO}
+                            onChange={(e) => setSelectedProduct({...selectedProduct, aiSEO: e.target.value})}
                             className="w-full px-3 py-2 border border-purple-300 rounded-lg"
                           />
                         </div>
@@ -644,6 +702,7 @@ export default function ProductManagement() {
                           <input
                             type="text"
                             value={selectedProduct.targetAudience}
+                            onChange={(e) => setSelectedProduct({...selectedProduct, targetAudience: e.target.value})}
                             className="w-full px-3 py-2 border border-purple-300 rounded-lg"
                           />
                         </div>
@@ -654,11 +713,7 @@ export default function ProductManagement() {
 
                 <div className="flex gap-3 pt-6 border-t sticky bottom-0 bg-white pb-6">
                   <button 
-                    onClick={() => {
-                      alert('שינויים נשמרו בהצלחה!');
-                      setShowEditModal(false);
-                      setSelectedProduct(null);
-                    }}
+                    onClick={handleUpdateProduct}
                     className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all"
                   >
                     שמור שינויים
@@ -702,6 +757,8 @@ export default function ProductManagement() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">שם מוצר *</label>
                     <input
                       type="text"
+                      value={formData.rawName}
+                      onChange={(e) => setFormData({...formData, rawName: e.target.value})}
                       placeholder="לדוגמה: נעלי ספורט Nike"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     />
@@ -710,6 +767,8 @@ export default function ProductManagement() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
                     <textarea
+                      value={formData.rawDescription}
+                      onChange={(e) => setFormData({...formData, rawDescription: e.target.value})}
                       placeholder="תיאור קצר של המוצר"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                       rows="3"
@@ -717,17 +776,11 @@ export default function ProductManagement() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">ברקוד (אופציונלי)</label>
-                    <input
-                      type="text"
-                      placeholder="1234567890123"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">קטגוריה *</label>
-                    <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <select 
+                      value={formData.category}
+                      onChange={(e) => setFormData({...formData, category: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                       <option value="">בחר קטגוריה</option>
                       {categories.map(cat => (
                         <option key={cat} value={cat}>{cat}</option>
@@ -735,11 +788,8 @@ export default function ProductManagement() {
                     </select>
                   </div>
 
-                  {/* Image Upload Section */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">תמונת מוצר</label>
-                    
-                    {/* Toggle between upload and URL */}
                     <div className="flex gap-2 mb-3">
                       <button
                         type="button"
@@ -803,18 +853,6 @@ export default function ProductManagement() {
                           placeholder="https://example.com/image.jpg"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                         />
-                        {imageUrl && (
-                          <div className="mt-3 p-2 border rounded-lg">
-                            <img 
-                              src={imageUrl} 
-                              alt="Preview" 
-                              className="w-full h-32 object-contain"
-                              onError={(e) => {
-                                e.target.src = 'https://via.placeholder.com/300x100/cccccc/666666?text=Invalid+URL';
-                              }}
-                            />
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
@@ -832,12 +870,7 @@ export default function ProductManagement() {
 
                 <div className="flex gap-3 mt-6">
                   <button 
-                    onClick={() => {
-                      alert('מוצר נוסף בהצלחה!');
-                      setShowAddModal(false);
-                      setImagePreview(null);
-                      setImageUrl('');
-                    }}
+                    onClick={handleAddProduct}
                     className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all"
                   >
                     הוסף מוצר
@@ -887,9 +920,6 @@ export default function ProductManagement() {
                       <div className="bg-white rounded p-3 text-sm font-mono">
                         rawName,rawDescription,barcode,category,image
                       </div>
-                      <p className="text-xs text-blue-700 mt-2">
-                        * rawName הוא שדה חובה. שאר השדות אופציונליים.
-                      </p>
                     </div>
 
                     <input
@@ -911,16 +941,6 @@ export default function ProductManagement() {
                         קובץ CSV עד 10MB
                       </p>
                     </label>
-
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h4 className="font-medium mb-2">💡 טיפים:</h4>
-                      <ul className="text-sm text-gray-600 space-y-1">
-                        <li>• ודא שהקובץ מקודד ב-UTF-8 לתמיכה בעברית</li>
-                        <li>• השתמש בפסיקים להפרדת ערכים</li>
-                        <li>• ניתן להוסיף קישורים לתמונות בעמודה 'image'</li>
-                        <li>• המערכת תריץ AI אוטומטית על כל המוצרים המיובאים</li>
-                      </ul>
-                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -929,7 +949,7 @@ export default function ProductManagement() {
                       <div>
                         <h3 className="font-medium text-green-900">קובץ הועלה בהצלחה!</h3>
                         <p className="text-sm text-green-800 mt-1">
-                          נמצאו {importPreview.length} מוצרים (מציג 5 ראשונים)
+                          נמצאו {importPreview.length} מוצרים
                         </p>
                       </div>
                     </div>
@@ -940,7 +960,6 @@ export default function ProductManagement() {
                           <table className="w-full">
                             <thead className="bg-gray-50 border-b">
                               <tr>
-                                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">תמונה</th>
                                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">שם מוצר</th>
                                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">תיאור</th>
                                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">קטגוריה</th>
@@ -950,16 +969,6 @@ export default function ProductManagement() {
                             <tbody className="divide-y">
                               {importPreview.map((item, idx) => (
                                 <tr key={idx} className="hover:bg-gray-50">
-                                  <td className="px-4 py-2">
-                                    <img 
-                                      src={item.image || item.imageUrl || 'https://via.placeholder.com/40x40/cccccc/ffffff?text=?'} 
-                                      alt=""
-                                      className="w-10 h-10 rounded object-cover"
-                                      onError={(e) => {
-                                        e.target.src = 'https://via.placeholder.com/40x40/cccccc/ffffff?text=?';
-                                      }}
-                                    />
-                                  </td>
                                   <td className="px-4 py-2 text-sm font-medium">{item.rawName || item.name}</td>
                                   <td className="px-4 py-2 text-sm text-gray-600 truncate max-w-xs">
                                     {item.rawDescription || item.description || '-'}
@@ -976,7 +985,7 @@ export default function ProductManagement() {
 
                     <div className="flex gap-3">
                       <button
-                        onClick={importCSVProducts}
+                        onClick={handleImportCSV}
                         className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all"
                       >
                         יבא {importPreview.length} מוצרים
