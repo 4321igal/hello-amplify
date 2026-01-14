@@ -1,22 +1,8 @@
-// This file is deprecated and should not be used
-// Use ProductManagementPage.tsx instead
-
+// This file is deprecated - use ProductManagementPage.tsx instead
 export default function ProductManagement() {
   return null;
 }
-    ready: products.filter(p => p.status === 'ready').length,
-    pending: products.filter(p => p.status === 'pending').length,
-    avgConfidence: (products.reduce((acc, p) => acc + p.confidence, 0) / products.length * 100).toFixed(0)
-  };
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.rawName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         p.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
-
-  const runAI = (productId) => {
     setAiRunning(true);
     setTimeout(() => {
       setProducts(products.map(p => {

@@ -4,3 +4,6 @@ export { default as ProductTable } from './ProductTable';
 export { default as AddProductModal } from './AddProductModal';
 export { default as EditProductModal } from './EditProductModal';
 export { default as ImportCSVModal } from './ImportCSVModal';
+export { default as ProductHeader } from './ProductHeader';
+export { default as StatsSection } from './StatsSection';
+export { default as ErrorBoundary } from './ErrorBoundary';
