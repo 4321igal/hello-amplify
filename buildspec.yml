@@ -1,0 +1,24 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Installing dependencies..."
+      - npm ci
+      - echo "Build started on `date`"
+  build:
+    commands:
+      - echo "Building application..."
+      - npm run build
+      - echo "Build completed on `date`"
+
+artifacts:
+  name: BuildArtifact
+  files:
+    - '**/*'
+  base-directory: dist
+  discard-paths: no
+
+cache:
+  paths:
+    - node_modules/**/*
