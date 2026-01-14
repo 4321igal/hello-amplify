@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './config/amplifySetup'; // Initialize Amplify
 import ProductManagementPage from './pages/ProductManagementPage';
 import './index.css';
 

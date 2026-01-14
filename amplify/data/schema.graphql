@@ -1,0 +1,59 @@
+# Product Management GraphQL Schema
+type Product @model @auth(rules: [{ allow: public }]) {
+  id: ID!
+  rawName: String!
+  rawDescription: String!
+  category: String!
+  barcode: String
+  image: String!
+  isOverridden: Boolean
+  status: ProductStatus!
+  confidence: Float!
+  
+  # AI Generated Fields
+  aiDescription: String
+  aiTags: [String!]
+  aiSEO: String
+  targetAudience: String
+  
+  # Metadata
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+  ownerId: String!
+}
+
+enum ProductStatus {
+  PENDING
+  READY
+}
+
+type Stats @model @auth(rules: [{ allow: public }]) {
+  id: ID!
+  total: Int!
+  ready: Int!
+  pending: Int!
+  avgConfidence: Int!
+  updatedAt: AWSDateTime!
+}
+
+type Query {
+  getProductStats: Stats
+    @function(name: "getProductStats-${env}")
+    @auth(rules: [{ allow: public }])
+}
+
+type Mutation {
+  importProductsFromCSV(file: String!): ImportResult
+    @function(name: "importCSV-${env}")
+    @auth(rules: [{ allow: public }])
+  
+  runAIAnalysis(productId: ID!): Product
+    @function(name: "runAIAnalysis-${env}")
+    @auth(rules: [{ allow: public }])
+}
+
+type ImportResult {
+  count: Int!
+  success: Boolean!
+  message: String!
+}
